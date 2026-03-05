@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pylwe"
-version = "0.1.0"
+version = "1.0.0"
 description = "A Python library for parsing and generating IEC 61162-450 (Lightweight Ethernet) packets."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "pynmea2>=1.19.0",
     "pyais>=2.15.0",

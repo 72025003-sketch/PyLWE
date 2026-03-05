@@ -1,6 +1,7 @@
 import socket
 import struct
 from pylwe import parse, LweParseError
+from pylwe.types import is_nmea, is_ais, is_raw_bytes  # TypeGuardをインポート
 
 def main(ip="0.0.0.0", port=60001, multicast_group="239.192.0.1"):
     """
@@ -31,22 +32,35 @@ def main(ip="0.0.0.0", port=60001, multicast_group="239.192.0.1"):
             data, addr = sock.recvfrom(4096)
             
             try:
-                # Parse the raw bytes
-                tags, sentence = parse(data)
+                # strict=False (デフォルト) でパース。壊れたデータもアプリを落とさず raw で返す。
+                packet = parse(data)
                 
-                print(f"[{addr[0]}:{addr[1]}] Tags: {tags}")
+                print(f"[{addr[0]}:{addr[1]}] Tags: {packet.tags}")
                 
-                # Check what type of sentence we received
-                if type(sentence).__module__.startswith("pyais"):
-                    print(f"  -> AIS Message: MMSI={getattr(sentence, 'mmsi', 'Unknown')}")
-                    # You can access properties like sentence.lat, sentence.lon, etc.
+                # 新設計の TypeGuard を使ったスマートな分岐
+                if is_ais(packet):
+                    # ここに入った時点で packet.decoded は None ではないと保証される
+                    # pyaisオブジェクトの属性に直接安全にアクセス可能
+                    mmsi = getattr(packet.decoded, 'mmsi', 'Unknown')
+                    print(f"  -> AIS Message: Formatter={packet.ais_meta.formatter}, MMSI={mmsi}")
+                    
+                elif is_nmea(packet):
+                    # ここに入った時点で packet.decoded は完全に NMEASentence 型として認識される
+                    # getattr は不要！
+                    sentence = packet.decoded
+                    print(f"  -> NMEA Sentence: {sentence.talker}{sentence.sentence_type}")
+                    
+                elif is_raw_bytes(packet):
+                    # ASCIIデコードすらできなかった完全なバイナリ破損データ
+                    print(f"  -> Unparseable Binary Data: {packet.raw_sentence.hex()[:20]}...")
+                    
                 else:
-                    print(f"  -> NMEA Sentence: {getattr(sentence, 'talker', '')}{getattr(sentence, 'sentence_type', '')}")
-                    # You can access properties like sentence.data
+                    # ASCII文字列ではあるが、LWEの文法エラーや未知のフォーマット
+                    print(f"  -> Raw/Unknown payload: {packet.raw_sentence[:30]}")
             
-            except LweParseError:
-                # In a real application, you might just log this or ignore non-LWE traffic on the port
-                print(f"[{addr[0]}:{addr[1]}] Received non-LWE or malformed data: {data[:20]}...")
+            except LweParseError as e:
+                # 致命的なエラー（UdPbCトークン欠落など）の場合のみここに来る
+                print(f"[{addr[0]}:{addr[1]}] Ignored non-LWE traffic: {e}")
             
     except KeyboardInterrupt:
         print("\nStopping UDP Receiver.")

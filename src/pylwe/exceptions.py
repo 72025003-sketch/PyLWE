@@ -13,3 +13,7 @@ class LweTagError(LweParseError):
 class LweChecksumError(LweTagError):
     """Raised when an LWE tag block checksum is invalid."""
     pass
+
+class LweGenerateError(Exception):
+    """Raised when generating an IEC 61162-450 LWE packet fails."""
+    pass

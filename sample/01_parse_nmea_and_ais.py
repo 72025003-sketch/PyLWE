@@ -1,5 +1,6 @@
 import json
 from pylwe import parse, LweParseError
+from pylwe.types import is_nmea, is_ais
 
 def main():
     # Example 1: Parsing an NMEA 0183 Packet
@@ -8,14 +9,15 @@ def main():
     print(f"Original Data: {nmea_data}")
     
     try:
-        tags, sentence = parse(nmea_data)
-        print(f"Tags: {json.dumps(tags, indent=2)}")
+        packet = parse(nmea_data)
+        print(f"Tags: {json.dumps(packet.tags, indent=2)}")
         
-        # `sentence` will be a pynmea2 object
-        print(f"Talker ID: {sentence.talker}")
-        print(f"Sentence Type: {sentence.sentence_type}")
-        print(f"Latitude: {sentence.lat} {sentence.lat_dir}")
-        print(f"Longitude: {sentence.lon} {sentence.lon_dir}")
+        if is_nmea(packet):
+            sentence = packet.decoded
+            print(f"Talker ID: {sentence.talker}")
+            print(f"Sentence Type: {sentence.sentence_type}")
+            print(f"Latitude: {sentence.lat} {sentence.lat_dir}")
+            print(f"Longitude: {sentence.lon} {sentence.lon_dir}")
     except LweParseError as e:
         print(f"Failed to parse NMEA: {e}")
 
@@ -25,16 +27,21 @@ def main():
     print(f"Original Data: {ais_data}")
     
     try:
-        tags, ais_msg = parse(ais_data)
-        print(f"Tags: {json.dumps(tags, indent=2)}")
-        
-        # `ais_msg` will be a pyais message object
-        print(f"MMSI: {ais_msg.mmsi}")
-        print(f"Speed: {ais_msg.speed} knots")
-        print(f"Course: {ais_msg.course} degrees")
-        print(f"Latitude: {ais_msg.lat}")
-        print(f"Longitude: {ais_msg.lon}")
-        print(f"Original Talker ID: {getattr(ais_msg, 'talker_id', 'Unknown')}")
+        packet = parse(ais_data)
+        print(f"Tags: {json.dumps(packet.tags, indent=2)}")
+
+        if is_ais(packet):
+            ais_msg = packet.decoded
+            print(f"MMSI: {ais_msg.mmsi}")
+            print(f"Speed: {getattr(ais_msg, 'speed', 'N/A')} knots")
+            print(f"Course: {getattr(ais_msg, 'course', 'N/A')} degrees")
+            print(f"Latitude: {getattr(ais_msg, 'lat', 'N/A')}")
+            print(f"Longitude: {getattr(ais_msg, 'lon', 'N/A')}")
+            
+            if packet.ais_meta:
+                 print(f"Original Talker ID: {packet.ais_meta.talker_id}")
+                 print(f"Formatter: {packet.ais_meta.formatter}")
+                 print(f"Radio Channel: {packet.ais_meta.radio_channel}")
     except LweParseError as e:
         print(f"Failed to parse AIS: {e}")
 
