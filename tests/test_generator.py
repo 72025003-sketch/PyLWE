@@ -33,7 +33,6 @@ def test_generate_packet_tag_too_long():
 def test_generate_ais_packet():
     import pyais
     from pylwe import generate_ais
-    from pylwe import AisMeta
     tags = {"s": "VD01", "c": "1234"}
     # Decode a sentence to get a pyais message object
     original_sentence = "!AIVDM,1,1,,A,14eG;o@034o8sd<L9i:a;WG>0000,0*0C"
@@ -42,11 +41,8 @@ def test_generate_ais_packet():
     from pylwe import parse
     full_packet = b"UdPbC\x00\\s:VD01,c:1234*2B\\" + original_sentence.encode('ascii') + b"\r\n"
     packet = parse(full_packet)
-    
-    # We create a new valid AisMeta with AIVDM for pyais, since the parser splits it.
-    meta = AisMeta(talker_id="AIVDM", formatter="", radio_channel="A", seq_id=None)
-    
-    packet_bytes = generate_ais(packet.decoded, tags=tags, ais_meta=meta)
+
+    packet_bytes = generate_ais(packet.decoded, tags=tags, ais_meta=packet.ais_meta)
     
     expected_content = b"UdPbC\x00\\c:1234,s:VD01*2B\\!AIVDM,1,1,,A,14eG;o@034o8sd<L9i:a;WG>0000,0*0C\r\n"
     assert packet_bytes == [expected_content]
