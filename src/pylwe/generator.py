@@ -67,7 +67,7 @@ def generate_ais(
     if ais_meta:
         if ais_meta.talker_id:
             talker_id = ais_meta.talker_id
-            if ais_meta.formatter and len(talker_id) == 2:
+            if isinstance(talker_id, str) and ais_meta.formatter and len(talker_id) == 2:
                 talker_id = f"{talker_id}{ais_meta.formatter}"
             encode_kwargs["talker_id"] = talker_id
         if ais_meta.radio_channel:
